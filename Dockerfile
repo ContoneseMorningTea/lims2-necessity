@@ -1,5 +1,5 @@
 FROM ubuntu:16.04
-MAINTAINER 17kong.dev@geneegroup.com
+LABEL MAINTAINER='17kong.dev@geneegroup.com'
 
 # Use faster APT mirror
 ADD sources.list /etc/apt/sources.list
@@ -10,7 +10,7 @@ RUN apt-get update && \
     apt-get -y install software-properties-common && \
     apt-get -y install wget language-pack-en bash-completion supervisor vim tzdata && \
     apt-get -y remove --purge vim-tiny && \
-    apt-get -y install php7.0-fpm php7.0-cli php7.0-gd php7.0-mcrypt php7.0-mbstring php7.0-mysql php7.0-sqlite3 php7.0-curl php7.0-ldap php7.0-zip && \
+    apt-get -y install php7.0-fpm php7.0-cli php7.0-gd php7.0-mcrypt php7.0-mbstring php7.0-mysql php7.0-sqlite3 php7.0-curl php7.0-ldap php7.0-zip php7.0-soap && \
     apt-get -y install build-essential php-pear php-msgpack php-zmq php-redis php7.0-dev && \
     sed -i 's/^listen\s*=.*$/listen = 0.0.0.0:9000/' /etc/php/7.0/fpm/pool.d/www.conf && \
     echo "error_log = /var/log/php7/cgi.log" >> /etc/php/7.0/fpm/php.ini && \
