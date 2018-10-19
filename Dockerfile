@@ -1,46 +1,55 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 LABEL MAINTAINER='17kong.dev@geneegroup.com'
 
 # Use faster APT mirror
 ADD sources.list /etc/apt/sources.list
 RUN rm -rf /etc/apt/sources.list.d/*
 
+ENV TZ Asia/Shanghai
+ENV TERM linux
+ENV LANG en_US.utf8
+
 # Install packages
 RUN apt-get update && \
     apt-get -y install software-properties-common && \
     apt-get -y install wget language-pack-en bash-completion supervisor vim tzdata && \
     apt-get -y remove --purge vim-tiny && \
-    apt-get -y install php7.0-fpm php7.0-cli php7.0-gd php7.0-mcrypt php7.0-mbstring php7.0-mysql php7.0-sqlite3 php7.0-curl php7.0-ldap php7.0-zip php7.0-soap && \
-    apt-get -y install build-essential php-pear php-msgpack php-zmq php-redis php7.0-dev && \
-    sed -i 's/^listen\s*=.*$/listen = 0.0.0.0:9000/' /etc/php/7.0/fpm/pool.d/www.conf && \
-    echo "error_log = /var/log/php7/cgi.log" >> /etc/php/7.0/fpm/php.ini && \
-    echo "cgi.fix_pathinfo = 1" >> /etc/php/7.0/fpm/php.ini && \
-    echo "post_max_size = 50M" >> /etc/php/7.0/fpm/php.ini && \
-    echo "upload_max_filesize = 50M" >> /etc/php/7.0/fpm/php.ini && \
-    echo "session.save_handler = redis" >> /etc/php/7.0/fpm/php.ini && \
-    echo "session.save_path = \"tcp://172.17.42.1:6379\"" >> /etc/php/7.0/fpm/php.ini && \
-    echo "error_log = /var/log/php7/cli.log" >> /etc/php/7.0/cli/php.ini && \
-    echo "session.save_handler = redis" >> /etc/php/7.0/cli/php.ini && \
-    echo "session.save_path = \"tcp://172.17.42.1:6379\"" >> /etc/php/7.0/cli/php.ini
-ADD www.conf /etc/php/7.0/fpm/pool.d/www.conf
+    apt-get -y install php-fpm php-cli php-gd php-mbstring php-mysql php-sqlite3 php-curl php-ldap php-zip php-soap && \
+    apt-get -y install build-essential php-pear php-msgpack php-zmq php-redis php-dev && \
+    sed -i 's/^listen\s*=.*$/listen = 0.0.0.0:9000/' /etc/php/7.2/fpm/pool.d/www.conf && \
+    echo "error_log = /var/log/php7/cgi.log" >> /etc/php/7.2/fpm/php.ini && \
+    echo "cgi.fix_pathinfo = 1" >> /etc/php/7.2/fpm/php.ini && \
+    echo "post_max_size = 50M" >> /etc/php/7.2/fpm/php.ini && \
+    echo "upload_max_filesize = 50M" >> /etc/php/7.2/fpm/php.ini && \
+    echo "session.save_handler = redis" >> /etc/php/7.2/fpm/php.ini && \
+    echo "session.save_path = \"tcp://172.17.42.1:6379\"" >> /etc/php/7.2/fpm/php.ini && \
+    echo "error_log = /var/log/php7/cli.log" >> /etc/php/7.2/cli/php.ini && \
+    echo "session.save_handler = redis" >> /etc/php/7.2/cli/php.ini && \
+    echo "session.save_path = \"tcp://172.17.42.1:6379\"" >> /etc/php/7.2/cli/php.ini
+ADD www.conf /etc/php/7.2/fpm/pool.d/www.conf
 
 # Basc PHP Ext
 RUN apt-get -y install libyaml-dev && \
-    printf '\n' | pecl install yaml-2.0.0 && \
-    echo "extension=yaml.so" > /etc/php/7.0/mods-available/yaml.ini && \
+    printf '\n' | pecl install yaml-2.0.2 && \
+    echo "extension=yaml.so" > /etc/php/7.2/mods-available/yaml.ini && \
     phpenmod yaml && \
-    rm -rf /tmp/yaml-2.0.0.tgz && \
+    rm -rf /tmp/yaml-2.0.2.tgz && \
+    apt-get -y install libmcrypt-dev && \
+    printf '\n' | pecl install mcrypt-1.0.1 && \
+    echo "extension=mcrypt.so" > /etc/php/7.2/mods-available/mcrypt.ini && \
+    phpenmod mcrypt && \
+    rm -rf /tmp/mcrypt-1.0.1.tgz && \
     apt-get -y install liblua5.2-dev && \
     ln -s /usr/include/lua5.2 /usr/include/lua && \
     cp /usr/lib/x86_64-linux-gnu/liblua5.2.a /usr/lib/liblua.a && \
     cp /usr/lib/x86_64-linux-gnu/liblua5.2.so /usr/lib/liblua.so && \
     printf '\n' | pecl install lua && \
-    echo "extension=lua.so" > /etc/php/7.0/mods-available/lua.ini && \
+    echo "extension=lua.so" > /etc/php/7.2/mods-available/lua.ini && \
     phpenmod lua
 
 # Swoole
 RUN pecl install swoole && \
-    echo "extension=swoole.so" > /etc/php/7.0/mods-available/swoole.ini && \
+    echo "extension=swoole.so" > /etc/php/7.2/mods-available/swoole.ini && \
     phpenmod swoole
 
 #Composer
@@ -54,10 +63,6 @@ RUN mkdir -p /usr/local/bin && mv /tmp/composer.phar /usr/local/bin/composer && 
     apt-get -y install expect && \
     rm -rf /var/lib/apt/lists/*
 
-ENV TZ Asia/Shanghai
-ENV TERM linux
-ENV LANG en_US.utf8
-
 # Install freshclam.conf
 ADD freshclam.conf /etc/clamav/freshclam.conf
 ADD bytecode.cvd /var/lib/clamav/bytecode.cvd
@@ -70,13 +75,14 @@ ENV COMPOSER_PROCESS_TIMEOUT 40000
 ENV COMPOSER_HOME /usr/local/share/composer
 ADD config.json $COMPOSER_HOME/config.json
 
-# Install PHP 7.0
+# Install PHP 7.2
 RUN mkdir -p /var/log/php7 && \
     mkdir -p /run/php && \
     touch /var/log/php7/cgi.log && \
     touch /var/log/php7/cli.log && \
     chown -R www-data:www-data /var/log/php7
 ADD supervisor.php7-fpm.conf /etc/supervisor/conf.d/php7-fpm.conf
+ADD supervisor.partner.conf /etc/supervisor/conf.d/partner.conf
 
 # Something extra
 RUN mkdir -p /tmp/lims2 && \
